@@ -1,0 +1,7 @@
+[package]
+name = "mscanner"
+version = "0.1.0"
+
+[dependencies]
+goblin = "0.7.1"
+nix = "0.26.4"

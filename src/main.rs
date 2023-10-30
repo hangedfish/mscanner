@@ -83,7 +83,6 @@ struct DiffBlock {
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-
 struct DynamicLibrary {
     pid: i32,
     base_addr: u64,
@@ -98,8 +97,20 @@ struct DynamicLibrary {
 
 impl DynamicLibrary {
     pub fn new(pid: i32, filename: String, vma_list: Vec<VMA>) -> Result<Self, &'static str> {
-        let elf_bytes = std::fs::read(&filename).unwrap();
-        let elf = Elf::parse(&elf_bytes).unwrap();
+        let elf_bytes = match std::fs::read(&filename) {
+            Ok(bytes) => bytes,
+            Err(_) => {
+                return Err("fail to open file");
+            }
+        };
+
+        // let elf_bytes = std::fs::read(&filename).unwrap();
+        let elf = match Elf::parse(&elf_bytes) {
+            Ok(x) => x,
+            Err(_) => {
+                return Err("fail to parse file");
+            }
+        };
         let mut x_segment_start = 0;
         let mut x_segment_end = 0;
         for phdr in elf.program_headers {
@@ -286,10 +297,15 @@ fn main() {
             .or_insert_with(Vec::new)
             .push(vma.clone());
     }
-    // 
+    //
     for (filename, vma_list) in filemaps {
-        // FIXME 跳过非 ELF 文件
-        let dynlib = DynamicLibrary::new(pid, filename.clone(), vma_list).unwrap();
+        // 跳过非 ELF 文件
+        let dynlib = match DynamicLibrary::new(pid, filename.clone(), vma_list) {
+            Ok(x) => x,
+            Err(_) => {
+                continue;
+            }
+        };
         if let Some(_diff_blocks) = dynlib.verif_text_memory() {
             println!("found memory broken in '{}'", dynlib.filename);
         }
